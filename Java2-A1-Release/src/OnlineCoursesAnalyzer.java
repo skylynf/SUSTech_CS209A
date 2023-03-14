@@ -3,6 +3,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -46,32 +47,174 @@ public class OnlineCoursesAnalyzer {
 
     //1
     public Map<String, Integer> getPtcpCountByInst() {
-        return null;
+        Map<String, Integer> ptcpCountByInst = new TreeMap<>();
+
+        for (Course course : courses) {
+            ptcpCountByInst.put(course.institution, ptcpCountByInst.getOrDefault(course.institution, 0) + course.participants);
+        }
+        return ptcpCountByInst;
     }
 
     //2
     public Map<String, Integer> getPtcpCountByInstAndSubject() {
-        return null;
+        Map<String, Integer> ptcpCountByInstAndSubject = new TreeMap<>(Collections.reverseOrder());
+
+        for (Course course : courses) {
+            String institution = course.institution;
+            String subject = course.subject;
+            int ptcpCount = course.participants;
+
+            String instAndSubject = institution + "-" + subject;
+            ptcpCountByInstAndSubject.put(instAndSubject, ptcpCountByInstAndSubject.getOrDefault(instAndSubject, 0) + ptcpCount);
+        }
+
+        // Sort the map by descending order of count (i.e., from most to least participants)
+        ptcpCountByInstAndSubject = ptcpCountByInstAndSubject.entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed()
+                        .thenComparing(Map.Entry.comparingByKey()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
+                        (oldValue, newValue) -> oldValue, LinkedHashMap::new));
+
+        return ptcpCountByInstAndSubject;
     }
 
     //3
     public Map<String, List<List<String>>> getCourseListOfInstructor() {
-        return null;
+        Map<String, List<List<String>>> courseListByInstructor = new HashMap<>();
+
+        for (Course course : courses) {
+
+            String courseTitle = course.title;
+            boolean isIndependent = !course.instructors.contains(",");
+
+            String[] instructorList = course.instructors.split(", ");
+
+            for (String instructor : instructorList) {
+                courseListByInstructor.putIfAbsent(instructor, new ArrayList<>());
+                List<List<String>> courseLists = courseListByInstructor.get(instructor);
+                while (courseLists.size() < 2) {
+                    courseLists.add(new ArrayList<>());
+                }
+                // Add the course title to the appropriate list of courses for the instructor
+                if (isIndependent) {
+                    if (!courseLists.get(0).contains(courseTitle)) {
+                        courseLists.get(0).add(courseTitle);
+                    }
+                } else {
+                    if (!courseLists.get(1).contains(courseTitle)) {
+                        courseLists.get(1).add(courseTitle);
+                    }
+                }
+            }
+
+        }
+
+        // Sort the course titles by alphabetical order within each list of courses
+        for (List<List<String>> courseLists : courseListByInstructor.values()) {
+            for (List<String> courseList : courseLists) {
+                Collections.sort(courseList);
+            }
+        }
+
+        return courseListByInstructor;
     }
 
     //4
     public List<String> getCourses(int topK, String by) {
-        return null;
+        Comparator<Course> comparator;
+        if (by.equals("hours")) {
+            comparator = Comparator.comparing(Course::getTotalHours).reversed()
+                    .thenComparing(Course::getTitle);
+        } else if (by.equals("participants")) {
+            comparator = Comparator.comparing(Course::getParticipants).reversed()
+                    .thenComparing(Course::getTitle);
+        } else {
+            throw new IllegalArgumentException("Invalid sorting criteria: " + by);
+        }
+        List<Course> sortedCourses = courses.stream().sorted(comparator).collect(Collectors.toList());
+        Set<String> courseTitles = new LinkedHashSet<>();
+        for (Course course : sortedCourses) {
+            courseTitles.add(course.getTitle());
+        }
+        return new ArrayList<>(courseTitles).subList(0,topK);
     }
+
+
 
     //5
     public List<String> searchCourses(String courseSubject, double percentAudited, double totalCourseHours) {
-        return null;
+        List<String> result = new ArrayList<>();
+        for (Course course : courses) {
+            if (course.subject.toLowerCase().contains(courseSubject.toLowerCase())
+                    && course.percentAudited >= percentAudited
+                    && course.totalHours <= totalCourseHours) {
+                result.add(course.getTitle());
+            }
+        }
+        Set<String> resultSet = new TreeSet<>(result);
+        return new ArrayList<>(resultSet);
     }
+
 
     //6
     public List<String> recommendCourses(int age, int gender, int isBachelorOrHigher) {
-        return null;
+        // Calculate the average Median Age, average gender100, and average isBachelorOrHigher100 for each course
+        for (Course course : courses) {
+            double avgMedianAge = course.medianAge;
+            double avgGender100 = course.percentMale;
+            double avgIsBachelorOrHigher100 = course.percentDegree;
+            int numParticipants = 1;
+            for (Course otherCourse : courses) {
+                if (course.getCourseNumber().equals(otherCourse.getCourseNumber()) && course.getLaunchDate().before(otherCourse.getLaunchDate())) {
+                    // Use latest Launch Date for the same course number
+                    course = otherCourse;
+                }
+                if (course.getCourseNumber().equals(otherCourse.getCourseNumber()) && course.getLaunchDate().equals(otherCourse.getLaunchDate())) {
+                    // Skip duplicate courses with the same Course Number and Launch Date
+                    continue;
+                }
+                if (course.getCourseNumber().equals(otherCourse.getCourseNumber())) {
+                    // Calculate the average Median Age, average gender100, and average isBachelorOrHigher100 for each course
+                    avgMedianAge += otherCourse.getMedianAge();
+                    avgGender100 += otherCourse.getPercentMale();
+                    avgIsBachelorOrHigher100 += otherCourse.getPercentDegree();
+                    numParticipants++;
+                }
+            }
+            course.setAvgMedianAge(avgMedianAge / numParticipants);
+            course.setAvgGender100(avgGender100 / numParticipants);
+            course.setAvgIsBachelorOrHigher100(avgIsBachelorOrHigher100 / numParticipants);
+        }
+
+        // Calculate the similarity value for each course and the input user
+        Map<Course, Double> similarityValues = new HashMap<>();
+        for (Course course : courses) {
+            double similarityValue = Math.pow((age - course.getAvgMedianAge()), 2) +
+                    Math.pow((gender * 100 - course.getAvgGender100()), 2) +
+                    Math.pow((isBachelorOrHigher * 100 - course.getAvgIsBachelorOrHigher100()), 2);
+            similarityValues.put(course, similarityValue);
+        }
+
+        // Sort the courses by their similarity values and return the top 10 courses
+        List<Course> sortedCourses = similarityValues.entrySet()
+                .stream()
+                .sorted(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+
+        List<String> recommendedCourses = new ArrayList<>();
+        Set<String> courseTitles = new HashSet<>(); // To prevent duplicate course titles
+        for (int i = 0; recommendedCourses.size() < 10; i++) {
+            Course course = sortedCourses.get(i);
+            String courseTitle = course.getTitle();
+            if (courseTitles.contains(courseTitle)) {
+                // Skip courses with duplicate titles
+                continue;
+            }
+            recommendedCourses.add(courseTitle);
+            courseTitles.add(courseTitle);
+        }
+        return recommendedCourses;
     }
 
 }
@@ -100,6 +243,9 @@ class Course {
     double percentMale;
     double percentFemale;
     double percentDegree;
+    double avgMedianAge;
+    double avgGender100;
+    double avgIsBachelorOrHigher100;
 
     public Course(String institution, String number, Date launchDate,
                   String title, String instructors, String subject,
@@ -139,5 +285,62 @@ class Course {
         this.percentMale = percentMale;
         this.percentFemale = percentFemale;
         this.percentDegree = percentDegree;
+
+    }
+
+    public String getTitle() {
+        return this.title;
+    }
+
+    public int getParticipants() {
+        return this.participants;
+    }
+
+    public double getTotalHours() {
+        return this.totalHours;
+    }
+
+    public String getCourseNumber() {
+        return this.number;
+    }
+
+    public double getMedianAge() {
+        return medianAge;
+    }
+
+    public double getPercentDegree() {
+        return percentDegree;
+    }
+
+    public Date getLaunchDate() {
+        return launchDate;
+    }
+
+    public double getAvgGender100() {
+        return avgGender100;
+    }
+
+    public double getAvgIsBachelorOrHigher100() {
+        return avgIsBachelorOrHigher100;
+    }
+
+    public double getAvgMedianAge() {
+        return avgMedianAge;
+    }
+
+    public double getPercentMale() {
+        return percentMale;
+    }
+
+    public void setAvgGender100(double avgGender100) {
+        this.avgGender100 = avgGender100;
+    }
+
+    public void setAvgIsBachelorOrHigher100(double avgIsBachelorOrHigher100) {
+        this.avgIsBachelorOrHigher100 = avgIsBachelorOrHigher100;
+    }
+
+    public void setAvgMedianAge(double avgMedianAge) {
+        this.avgMedianAge = avgMedianAge;
     }
 }
