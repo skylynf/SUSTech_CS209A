@@ -5,12 +5,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- *
- * This is just a demo for you, please run it on JDK17 (some statements may be not allowed in lower version).
- * This is just a demo, and you can extend and implement functions
- * based on this demo, or implement it in a different way.
- */
 public class OnlineCoursesAnalyzer {
 
     List<Course> courses = new ArrayList<>();
@@ -23,13 +17,25 @@ public class OnlineCoursesAnalyzer {
             br.readLine();
             while ((line = br.readLine()) != null) {
                 String[] info = line.split(",(?=([^\\\"]*\\\"[^\\\"]*\\\")*[^\\\"]*$)", -1);
-                Course course = new Course(info[0], info[1], new Date(info[2]), info[3], info[4], info[5],
-                        Integer.parseInt(info[6]), Integer.parseInt(info[7]), Integer.parseInt(info[8]),
-                        Integer.parseInt(info[9]), Integer.parseInt(info[10]), Double.parseDouble(info[11]),
-                        Double.parseDouble(info[12]), Double.parseDouble(info[13]), Double.parseDouble(info[14]),
-                        Double.parseDouble(info[15]), Double.parseDouble(info[16]), Double.parseDouble(info[17]),
-                        Double.parseDouble(info[18]), Double.parseDouble(info[19]), Double.parseDouble(info[20]),
-                        Double.parseDouble(info[21]), Double.parseDouble(info[22]));
+                Course course = new Course(info[0], info[1],
+                        new Date(info[2]), info[3], info[4], info[5],
+                        Integer.parseInt(info[6]),
+                        Integer.parseInt(info[7]),
+                        Integer.parseInt(info[8]),
+                        Integer.parseInt(info[9]),
+                        Integer.parseInt(info[10]),
+                        Double.parseDouble(info[11]),
+                        Double.parseDouble(info[12]),
+                        Double.parseDouble(info[13]),
+                        Double.parseDouble(info[14]),
+                        Double.parseDouble(info[15]),
+                        Double.parseDouble(info[16]),
+                        Double.parseDouble(info[17]),
+                        Double.parseDouble(info[18]),
+                        Double.parseDouble(info[19]),
+                        Double.parseDouble(info[20]),
+                        Double.parseDouble(info[21]),
+                        Double.parseDouble(info[22]));
                 courses.add(course);
             }
         } catch (IOException e) {
@@ -50,7 +56,9 @@ public class OnlineCoursesAnalyzer {
         Map<String, Integer> ptcpCountByInst = new TreeMap<>();
 
         for (Course course : courses) {
-            ptcpCountByInst.put(course.institution, ptcpCountByInst.getOrDefault(course.institution, 0) + course.participants);
+            ptcpCountByInst
+                    .put(course.institution, ptcpCountByInst
+                            .getOrDefault(course.institution, 0) + course.participants);
         }
         return ptcpCountByInst;
     }
@@ -65,10 +73,11 @@ public class OnlineCoursesAnalyzer {
             int ptcpCount = course.participants;
 
             String instAndSubject = institution + "-" + subject;
-            ptcpCountByInstAndSubject.put(instAndSubject, ptcpCountByInstAndSubject.getOrDefault(instAndSubject, 0) + ptcpCount);
+            ptcpCountByInstAndSubject
+                    .put(instAndSubject, ptcpCountByInstAndSubject
+                            .getOrDefault(instAndSubject, 0) + ptcpCount);
         }
 
-        // Sort the map by descending order of count (i.e., from most to least participants)
         ptcpCountByInstAndSubject = ptcpCountByInstAndSubject.entrySet().stream()
                 .sorted(Map.Entry.<String, Integer>comparingByValue().reversed()
                         .thenComparing(Map.Entry.comparingByKey()))
@@ -95,7 +104,6 @@ public class OnlineCoursesAnalyzer {
                 while (courseLists.size() < 2) {
                     courseLists.add(new ArrayList<>());
                 }
-                // Add the course title to the appropriate list of courses for the instructor
                 if (isIndependent) {
                     if (!courseLists.get(0).contains(courseTitle)) {
                         courseLists.get(0).add(courseTitle);
@@ -109,7 +117,6 @@ public class OnlineCoursesAnalyzer {
 
         }
 
-        // Sort the course titles by alphabetical order within each list of courses
         for (List<List<String>> courseLists : courseListByInstructor.values()) {
             for (List<String> courseList : courseLists) {
                 Collections.sort(courseList);
@@ -142,7 +149,9 @@ public class OnlineCoursesAnalyzer {
 
 
     //5
-    public List<String> searchCourses(String courseSubject, double percentAudited, double totalCourseHours) {
+    public List<String> searchCourses(String courseSubject,
+                                      double percentAudited,
+                                      double totalCourseHours) {
         List<String> result = new ArrayList<>();
         for (Course course : courses) {
             if (course.subject.toLowerCase().contains(courseSubject.toLowerCase())
@@ -158,23 +167,21 @@ public class OnlineCoursesAnalyzer {
 
     //6
     public List<String> recommendCourses(int age, int gender, int isBachelorOrHigher) {
-        // Calculate the average Median Age, average gender100, and average isBachelorOrHigher100 for each course
         for (Course course : courses) {
             double avgMedianAge = course.medianAge;
             double avgGender100 = course.percentMale;
             double avgIsBachelorOrHigher100 = course.percentDegree;
             int numParticipants = 1;
             for (Course otherCourse : courses) {
-                if (course.getCourseNumber().equals(otherCourse.getCourseNumber()) && course.getLaunchDate().before(otherCourse.getLaunchDate())) {
-                    // Use latest Launch Date for the same course number
+                if (course.getCourseNumber().equals(otherCourse.getCourseNumber())
+                        && course.getLaunchDate().before(otherCourse.getLaunchDate())) {
                     course = otherCourse;
                 }
-                if (course.getCourseNumber().equals(otherCourse.getCourseNumber()) && course.getLaunchDate().equals(otherCourse.getLaunchDate())) {
-                    // Skip duplicate courses with the same Course Number and Launch Date
+                if (course.getCourseNumber().equals(otherCourse.getCourseNumber())
+                        && course.getLaunchDate().equals(otherCourse.getLaunchDate())) {
                     continue;
                 }
                 if (course.getCourseNumber().equals(otherCourse.getCourseNumber())) {
-                    // Calculate the average Median Age, average gender100, and average isBachelorOrHigher100 for each course
                     avgMedianAge += otherCourse.getMedianAge();
                     avgGender100 += otherCourse.getPercentMale();
                     avgIsBachelorOrHigher100 += otherCourse.getPercentDegree();
@@ -186,7 +193,6 @@ public class OnlineCoursesAnalyzer {
             course.setAvgIsBachelorOrHigher100(avgIsBachelorOrHigher100 / numParticipants);
         }
 
-        // Calculate the similarity value for each course and the input user
         Map<Course, Double> similarityValues = new HashMap<>();
         for (Course course : courses) {
             double similarityValue = Math.pow((age - course.getAvgMedianAge()), 2) +
@@ -195,7 +201,6 @@ public class OnlineCoursesAnalyzer {
             similarityValues.put(course, similarityValue);
         }
 
-        // Sort the courses by their similarity values and return the top 10 courses
         List<Course> sortedCourses = similarityValues.entrySet()
                 .stream()
                 .sorted(Map.Entry.comparingByValue())
@@ -203,12 +208,11 @@ public class OnlineCoursesAnalyzer {
                 .collect(Collectors.toList());
 
         List<String> recommendedCourses = new ArrayList<>();
-        Set<String> courseTitles = new HashSet<>(); // To prevent duplicate course titles
+        Set<String> courseTitles = new HashSet<>();
         for (int i = 0; recommendedCourses.size() < 10; i++) {
             Course course = sortedCourses.get(i);
             String courseTitle = course.getTitle();
             if (courseTitles.contains(courseTitle)) {
-                // Skip courses with duplicate titles
                 continue;
             }
             recommendedCourses.add(courseTitle);
